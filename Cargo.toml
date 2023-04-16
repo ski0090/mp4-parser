@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "mp4-macros",
+    "mp4-parser",
+    "examples"
+]

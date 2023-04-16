@@ -1,0 +1,24 @@
+[package]
+name = "mp4-examples"
+version = "0.1.0"
+edition = "2021"
+autoexamples = true
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mp4-macros = { path="../mp4-macros" }
+mp4-parser = { path="../mp4-parser" }
+
+tui = "0.19"
+crossterm = "0.26"
+unicode-width = "0.1.10"
+tokio = { version = "1.27.0", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+clap = { version = "4.1", features = ["derive"]}
+
+[[bin]]
+name = "tui"
+path = "tui/main.rs"
