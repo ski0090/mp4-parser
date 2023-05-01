@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufReader, Seek},
-    path::Path,
-};
+use std::{fs::File, io::BufReader, path::Path};
 
 use crate::{
     atoms::{ftyp::Ftyp, moov::Moov, BaseBox, Mp4Atom},
@@ -39,5 +35,9 @@ impl Mp4Header {
         }
 
         Mp4Header { atoms }
+    }
+
+    pub fn print_atom(&self) {
+        self.atoms.iter().for_each(|atom| atom.print_atom());
     }
 }

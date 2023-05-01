@@ -13,7 +13,7 @@ pub trait Mp4Atom: Debug {
         R: Read + Seek,
         Self: Sized;
 
-    fn print(&self);
+    fn print_atom(&self);
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ impl BaseBox {
         R: Read + Seek,
     {
         let offset = self.offset + self.size;
-        reader.seek(SeekFrom::Start(offset));
+        reader.seek(SeekFrom::Start(offset)).unwrap();
         let (name, size) = Self::parse_header(reader);
         Self {
             offset,

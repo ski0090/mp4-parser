@@ -1,7 +1,15 @@
-use proc_macro::TokenStream;
+mod atom_print;
+mod errors;
+mod extract;
 
-#[proc_macro_derive(AtomDisplay, attributes(print_atom))]
-pub fn atom_display(_input: TokenStream) -> TokenStream {
-    // let ast = parse_macro_input!(input as DeriveInput);
-    TokenStream::new()
+use proc_macro::TokenStream;
+use syn::{parse_macro_input, DeriveInput};
+
+#[proc_macro_derive(AtomPrint, attributes(print_atom))]
+pub fn atom_display(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    atom_print::AtiomPrintSt::try_from(&ast)
+        .map(|st| st.emit())
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
 }

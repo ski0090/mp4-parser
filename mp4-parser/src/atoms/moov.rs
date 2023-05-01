@@ -7,12 +7,14 @@ pub struct Moov {
 }
 
 impl Mp4Atom for Moov {
-    fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
+    fn parse<R>(base: BaseBox, _reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
     {
         Self { base }
     }
 
-    fn print(&self) {}
+    fn print_atom(&self) {
+        self.base.print();
+    }
 }

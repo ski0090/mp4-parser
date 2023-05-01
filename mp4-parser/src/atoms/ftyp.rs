@@ -1,15 +1,19 @@
 use byteorder::*;
+use mp4_macros::AtomPrint;
 use std::io::{Read, Seek};
 
 use crate::utils::helper::read_string;
 
 use super::{BaseBox, Mp4Atom};
 
-#[derive(Debug)]
+#[derive(Debug, AtomPrint)]
 pub struct Ftyp {
     base: BaseBox,
+    #[print_atom()]
     major: String,
+    #[print_atom()]
     minor: u32,
+    #[print_atom()]
     brands: Vec<String>,
 }
 
@@ -35,11 +39,10 @@ impl Mp4Atom for Ftyp {
         }
     }
 
-    fn print(&self) {
+    fn print_atom(&self) {
         self.base.print();
-        self.base.print_depth();
-        println!("major: {}", self.major);
-        self.base.print_depth();
-        println!("minor: {}", self.minor);
+        self.print_major();
+        self.print_minor();
+        self.print_brands();
     }
 }
