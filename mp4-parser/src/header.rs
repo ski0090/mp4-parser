@@ -1,13 +1,18 @@
 use std::{fs::File, io::BufReader, path::Path};
 
+use mp4_macros::Printer;
+
 use crate::{
-    atoms::{ftyp::Ftyp, mdat::Mdat, moov::Moov, undef::Undef, BaseBox, Mp4Atom},
+    atoms::{
+        ftyp::Ftyp, mdat::Mdat, moov::Moov, undef::Undef, BaseBox, Mp4AtomParse, Mp4AtomPrint,
+    },
     utils::name::BoxType,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Printer)]
 pub struct Mp4Header {
-    atoms: Vec<Box<dyn Mp4Atom>>,
+    #[print_comp(atom_container)]
+    atoms: Vec<Box<dyn Mp4AtomPrint>>,
 }
 
 impl Mp4Header {
@@ -18,7 +23,7 @@ impl Mp4Header {
         let f = File::open(path).unwrap();
         let mut reader = BufReader::new(f);
         let mut base = BaseBox::new(&mut reader);
-        let mut atoms: Vec<Box<dyn Mp4Atom>> = Vec::new();
+        let mut atoms: Vec<Box<dyn Mp4AtomPrint>> = Vec::new();
 
         loop {
             match base.name() {
@@ -43,6 +48,6 @@ impl Mp4Header {
     }
 
     pub fn print_comp(&self) {
-        self.atoms.iter().for_each(|atom| atom.print_comp());
+        self.print_atoms();
     }
 }

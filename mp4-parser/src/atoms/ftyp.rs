@@ -1,12 +1,12 @@
 use byteorder::*;
-use mp4_macros::Printer;
+use mp4_macros::ImplMp4AtomPrint;
 use std::io::{Read, Seek};
 
 use crate::utils::helper::read_string;
 
-use super::{BaseBox, Mp4Atom};
+use super::{BaseBox, Mp4AtomParse};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Ftyp {
     base: BaseBox,
     #[print_comp()]
@@ -17,7 +17,7 @@ pub struct Ftyp {
     brands: Vec<String>,
 }
 
-impl Mp4Atom for Ftyp {
+impl Mp4AtomParse for Ftyp {
     fn parse<R>(base: BaseBox, reader: &mut std::io::BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -37,12 +37,5 @@ impl Mp4Atom for Ftyp {
             minor,
             brands,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_major();
-        self.print_minor();
-        self.print_brands();
     }
 }

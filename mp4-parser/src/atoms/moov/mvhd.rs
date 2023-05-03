@@ -1,10 +1,10 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use mp4_macros::Printer;
+use mp4_macros::ImplMp4AtomPrint;
 
-use super::{BaseBox, Mp4Atom};
+use super::{BaseBox, Mp4AtomParse};
 use std::io::{BufReader, Read, Seek, SeekFrom};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Mvhd {
     base: BaseBox,
     #[print_comp()]
@@ -27,7 +27,7 @@ pub struct Mvhd {
     duration_sec: std::time::Duration,
 }
 
-impl Mp4Atom for Mvhd {
+impl Mp4AtomParse for Mvhd {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -91,18 +91,5 @@ impl Mp4Atom for Mvhd {
             next_track_id,
             duration_sec,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_version();
-        self.print_flags();
-        self.print_creation_time();
-        self.print_modification_time();
-        self.print_timescale();
-        self.print_duration();
-        self.print_current_time();
-        self.print_next_track_id();
-        self.print_duration_sec();
     }
 }

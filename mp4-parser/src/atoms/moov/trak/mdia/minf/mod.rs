@@ -2,26 +2,32 @@ mod dinf;
 mod smhd;
 mod vmhd;
 
-use crate::{atoms::undef::Undef, utils::name::BoxType};
+use mp4_macros::ImplMp4AtomPrint;
+
+use crate::{
+    atoms::{undef::Undef, Mp4AtomPrint},
+    utils::name::BoxType,
+};
 
 use self::{dinf::Dinf, smhd::Smhd, vmhd::Vmhd};
 
-use super::{hdlr::Hdlr, BaseBox, Mp4Atom};
+use super::{hdlr::Hdlr, BaseBox, Mp4AtomParse};
 use std::io::{BufReader, Read, Seek};
 
-#[derive(Debug)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Minf {
     base: BaseBox,
-    atoms: Vec<Box<dyn Mp4Atom>>,
+    #[print_comp(atom_container)]
+    atoms: Vec<Box<dyn Mp4AtomPrint>>,
 }
 
-impl Mp4Atom for Minf {
+impl Mp4AtomParse for Minf {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
     {
         let mut child_base = base.child(reader);
-        let mut atoms: Vec<Box<dyn Mp4Atom>> = Vec::new();
+        let mut atoms: Vec<Box<dyn Mp4AtomPrint>> = Vec::new();
         let end = base.offset + base.size;
         while reader.stream_position().unwrap() < end {
             match child_base.name() {
@@ -44,10 +50,5 @@ impl Mp4Atom for Minf {
             child_base = child_base.next(reader);
         }
         Self { base, atoms }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.atoms.iter().for_each(|atom| atom.print_comp());
     }
 }

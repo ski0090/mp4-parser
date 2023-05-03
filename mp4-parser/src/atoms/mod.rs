@@ -9,12 +9,14 @@ use std::{
     io::{BufReader, ErrorKind, Read, Seek, SeekFrom},
 };
 
-pub trait Mp4Atom: Debug {
+pub trait Mp4AtomParse: Debug {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
         Self: Sized;
+}
 
+pub trait Mp4AtomPrint: Debug + Mp4AtomParse {
     fn print_comp(&self);
 }
 

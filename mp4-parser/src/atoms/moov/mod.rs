@@ -1,26 +1,29 @@
 mod mvhd;
 mod trak;
 
+use mp4_macros::ImplMp4AtomPrint;
+
 use crate::utils::name::BoxType;
 
 use self::{mvhd::Mvhd, trak::Trak};
 
-use super::{undef::Undef, BaseBox, Mp4Atom};
+use super::{undef::Undef, BaseBox, Mp4AtomParse, Mp4AtomPrint};
 use std::io::{BufReader, Read, Seek};
 
-#[derive(Debug)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Moov {
     base: BaseBox,
-    atoms: Vec<Box<dyn Mp4Atom>>,
+    #[print_comp(atom_container)]
+    atoms: Vec<Box<dyn Mp4AtomPrint>>,
 }
 
-impl Mp4Atom for Moov {
+impl Mp4AtomParse for Moov {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
     {
         let mut child_base = base.child(reader);
-        let mut atoms: Vec<Box<dyn Mp4Atom>> = Vec::new();
+        let mut atoms: Vec<Box<dyn Mp4AtomPrint>> = Vec::new();
         let end = base.offset + base.size;
         while reader.stream_position().unwrap() < end {
             match child_base.name() {
@@ -38,10 +41,5 @@ impl Mp4Atom for Moov {
         }
 
         Self { base, atoms }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.atoms.iter().for_each(|atom| atom.print_comp());
     }
 }

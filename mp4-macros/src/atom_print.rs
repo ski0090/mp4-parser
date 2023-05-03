@@ -15,6 +15,28 @@ enum Action {
     Rename(Ident),
     Iter,
     Structure,
+    AtomContainer,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum MacroAction {
+    Print,
+    Rename,
+    Iter,
+    Structure,
+    AtomContainer,
+}
+
+impl From<Action> for MacroAction {
+    fn from(value: Action) -> Self {
+        match &value {
+            Action::Print => MacroAction::Print,
+            Action::Rename(_) => MacroAction::Rename,
+            Action::Iter => MacroAction::Iter,
+            Action::Structure => MacroAction::Structure,
+            Action::AtomContainer => MacroAction::AtomContainer,
+        }
+    }
 }
 
 impl Parse for Action {
@@ -22,6 +44,7 @@ impl Parse for Action {
         syn::custom_keyword!(rename);
         syn::custom_keyword!(iter);
         syn::custom_keyword!(st);
+        syn::custom_keyword!(atom_container);
         if input.peek(rename) {
             let _ = input.parse::<rename>()?;
             let _ = input.parse::<syn::Token![=]>()?;
@@ -40,6 +63,9 @@ impl Parse for Action {
         } else if input.peek(st) {
             let _ = input.parse::<st>()?;
             Ok(Action::Structure)
+        } else if input.peek(atom_container) {
+            let _ = input.parse::<atom_container>()?;
+            Ok(Action::AtomContainer)
         } else {
             Ok(Action::Print)
         }
@@ -61,8 +87,7 @@ fn get_action_from(attributes: &[Attribute]) -> Result<Option<Action>> {
 pub struct Field {
     name: Ident,
     fn_name: Ident,
-    has_iter: bool,
-    is_st: bool,
+    action: MacroAction,
 }
 
 impl Field {
@@ -71,31 +96,17 @@ impl Field {
             .ident
             .clone()
             .ok_or(Error::new(Span::call_site(), Problem::UnnamedField))?;
-
-        match get_action_from(field.attrs.as_slice())? {
-            Some(Action::Print) => Ok(Some(Field {
-                name: name.clone(),
-                fn_name: name,
-                has_iter: false,
-                is_st: false,
-            })),
+        let action = get_action_from(field.attrs.as_slice())?;
+        match &action {
             Some(Action::Rename(ident)) => Ok(Some(Field {
                 name,
-                fn_name: ident,
-                has_iter: false,
-                is_st: false,
+                fn_name: ident.clone(),
+                action: action.unwrap().into(),
             })),
-            Some(Action::Iter) => Ok(Some(Field {
+            Some(_) => Ok(Some(Field {
                 name: name.clone(),
                 fn_name: name,
-                has_iter: true,
-                is_st: false,
-            })),
-            Some(Action::Structure) => Ok(Some(Field {
-                name: name.clone(),
-                fn_name: name,
-                has_iter: false,
-                is_st: true,
+                action: action.unwrap().into(),
             })),
             None => Ok(None),
         }
@@ -114,13 +125,20 @@ impl Field {
             })
     }
 
-    fn emit(&self, struct_name: &Ident) -> TokenStream {
+    fn create_print_function(&self, struct_name: &Ident) -> TokenStream {
         let field_name = &self.name;
         let fn_print = format_ident!("print_{}", &self.fn_name);
         let comment = format!("Get field {} from instance of {}.", field_name, struct_name,);
 
-        if self.has_iter {
-            quote!(
+        match self.action {
+            MacroAction::Rename | MacroAction::Print => quote!(
+                #[doc=#comment]
+                pub fn #fn_print(&self) {
+                    self.base.print_depth();
+                    println!("{}: {}", stringify!(#field_name) , self.#field_name);
+                }
+            ),
+            MacroAction::Iter => quote!(
                 #[doc=#comment]
                 pub fn #fn_print(&self) {
                     self.base.print_depth();
@@ -133,42 +151,48 @@ impl Field {
                     self.base.print_depth();
                     println!("</{}>",stringify!(#field_name));
                 }
-            )
-        } else if self.is_st {
-            quote!(
+            ),
+            MacroAction::Structure => quote!(
                 #[doc=#comment]
                 pub fn #fn_print(&self) {
                     self.base.print_depth();
                     println!("{}: {:?}", stringify!(#field_name) , self.#field_name);
                 }
-            )
-        } else {
-            quote!(
+            ),
+            MacroAction::AtomContainer => quote!(
                 #[doc=#comment]
                 pub fn #fn_print(&self) {
-                    self.base.print_depth();
-                    println!("{}: {}", stringify!(#field_name) , self.#field_name);
+                    self.#field_name.iter().for_each(|atom| atom.print_comp());
                 }
-            )
+            ),
         }
+    }
+
+    fn create_print_comp_func(&self) -> TokenStream {
+        let field_name = &self.name;
+        let fn_print = format_ident!("print_{}", field_name);
+        if self.action == MacroAction::AtomContainer {}
+        quote!(
+            self.#fn_print();
+        )
     }
 }
 
-pub struct AtiomPrintSt<'a> {
+pub struct PrinterStruct<'a> {
     original: &'a DeriveInput,
     st_name: Ident,
     fields: Vec<Field>,
 }
 
-impl<'a> AtiomPrintSt<'a> {
-    pub fn emit(&self) -> TokenStream {
+impl<'a> PrinterStruct<'a> {
+    pub fn create_print(&self) -> TokenStream {
         let (impl_generics, struct_generics, where_clause) =
             self.original.generics.split_for_impl();
         let struct_name = &self.st_name;
         let methods: Vec<TokenStream> = self
             .fields
             .iter()
-            .map(|field| field.emit(&self.st_name))
+            .map(|field| field.create_print_function(&self.st_name))
             .collect();
 
         quote!(
@@ -179,9 +203,41 @@ impl<'a> AtiomPrintSt<'a> {
             }
         )
     }
+
+    pub fn create_mp4_print(&self) -> TokenStream {
+        let (impl_generics, struct_generics, where_clause) =
+            self.original.generics.split_for_impl();
+        let struct_name = &self.st_name;
+        let methods: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|field| field.create_print_function(&self.st_name))
+            .collect();
+
+        let methods_call: Vec<TokenStream> = self
+            .fields
+            .iter()
+            .map(|field| field.create_print_comp_func())
+            .collect();
+
+        quote!(
+            impl #impl_generics #struct_name #struct_generics
+                #where_clause
+            {
+                #(#methods)*
+            }
+
+            impl crate::atoms::Mp4AtomPrint for #struct_name {
+                fn print_comp(&self) {
+                    self.base.print();
+                    #(#methods_call)*
+                }
+            }
+        )
+    }
 }
 
-impl<'a> TryFrom<&'a DeriveInput> for AtiomPrintSt<'a> {
+impl<'a> TryFrom<&'a DeriveInput> for PrinterStruct<'a> {
     type Error = Error;
 
     fn try_from(node: &'a DeriveInput) -> Result<Self> {
@@ -189,7 +245,7 @@ impl<'a> TryFrom<&'a DeriveInput> for AtiomPrintSt<'a> {
         let named_fields = named_fields(struct_data)?;
         let fields = Field::from_fields_named(named_fields)?;
 
-        Ok(AtiomPrintSt {
+        Ok(PrinterStruct {
             original: node,
             st_name: node.ident.clone(),
             fields,

@@ -1,12 +1,10 @@
-use byteorder::{BigEndian, ReadBytesExt};
-use mp4_macros::Printer;
-
+use super::{BaseBox, Mp4AtomParse};
 use crate::utils::{helper::read_string, values::HEADER_SIZE};
-
-use super::{BaseBox, Mp4Atom};
+use byteorder::{BigEndian, ReadBytesExt};
+use mp4_macros::ImplMp4AtomPrint;
 use std::io::{BufReader, Read, Seek};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Elng {
     base: BaseBox,
     #[print_comp()]
@@ -17,7 +15,7 @@ pub struct Elng {
     language: String,
 }
 
-impl Mp4Atom for Elng {
+impl Mp4AtomParse for Elng {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -33,12 +31,5 @@ impl Mp4Atom for Elng {
             flags,
             language,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_version();
-        self.print_flags();
-        self.print_language();
     }
 }

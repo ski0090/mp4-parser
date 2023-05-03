@@ -1,12 +1,12 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use mp4_macros::Printer;
+use mp4_macros::ImplMp4AtomPrint;
 
 use crate::utils::{helper::read_string, values::HEADER_SIZE};
 
-use super::{BaseBox, Mp4Atom};
+use super::{BaseBox, Mp4AtomParse};
 use std::io::{BufReader, Read, Seek};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Hdlr {
     base: BaseBox,
     #[print_comp()]
@@ -27,7 +27,7 @@ pub struct Hdlr {
     component_name: String,
 }
 
-impl Mp4Atom for Hdlr {
+impl Mp4AtomParse for Hdlr {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -53,17 +53,5 @@ impl Mp4Atom for Hdlr {
             component_mask,
             component_name,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_version();
-        self.print_flags();
-        self.print_component_type();
-        self.print_component_sub();
-        self.print_component_manufacturer();
-        self.print_component_flags();
-        self.print_component_mask();
-        self.print_component_name();
     }
 }

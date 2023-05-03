@@ -1,10 +1,10 @@
-use super::{BaseBox, Mp4Atom};
+use super::{BaseBox, Mp4AtomParse};
 use crate::utils::helper::{FixedPointU16, FixedPointU8};
 use byteorder::{BigEndian, ReadBytesExt};
-use mp4_macros::Printer;
+use mp4_macros::ImplMp4AtomPrint;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Tkhd {
     base: BaseBox,
     #[print_comp()]
@@ -31,7 +31,7 @@ pub struct Tkhd {
     height: u16,
 }
 
-impl Mp4Atom for Tkhd {
+impl Mp4AtomParse for Tkhd {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -87,20 +87,5 @@ impl Mp4Atom for Tkhd {
             width,
             height,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_version();
-        self.print_flags();
-        self.print_creation_time();
-        self.print_modification_time();
-        self.print_track_id();
-        self.print_duration();
-        self.print_layer();
-        self.print_alternate_group();
-        self.print_volume();
-        self.print_width();
-        self.print_height();
     }
 }

@@ -1,10 +1,10 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use mp4_macros::Printer;
+use mp4_macros::ImplMp4AtomPrint;
 
-use super::{BaseBox, Mp4Atom};
+use super::{BaseBox, Mp4AtomParse};
 use std::io::{BufReader, Read, Seek};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Dref {
     base: BaseBox,
     #[print_comp()]
@@ -15,7 +15,7 @@ pub struct Dref {
     num_of_entires: u32,
 }
 
-impl Mp4Atom for Dref {
+impl Mp4AtomParse for Dref {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -30,12 +30,5 @@ impl Mp4Atom for Dref {
             flags,
             num_of_entires,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_version();
-        self.print_flags();
-        self.print_num_of_entires();
     }
 }

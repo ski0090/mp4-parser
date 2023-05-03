@@ -1,10 +1,10 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use mp4_macros::Printer;
+use mp4_macros::ImplMp4AtomPrint;
 
-use super::{BaseBox, Mp4Atom};
+use super::{BaseBox, Mp4AtomParse};
 use std::io::{BufReader, Read, Seek};
 
-#[derive(Debug, Printer)]
+#[derive(Debug, ImplMp4AtomPrint)]
 pub struct Vmhd {
     base: BaseBox,
     #[print_comp()]
@@ -17,7 +17,7 @@ pub struct Vmhd {
     opcolor: u64,
 }
 
-impl Mp4Atom for Vmhd {
+impl Mp4AtomParse for Vmhd {
     fn parse<R>(base: BaseBox, reader: &mut BufReader<R>) -> Self
     where
         R: Read + Seek,
@@ -33,13 +33,5 @@ impl Mp4Atom for Vmhd {
             graphic_mode,
             opcolor,
         }
-    }
-
-    fn print_comp(&self) {
-        self.base.print();
-        self.print_version();
-        self.print_flags();
-        self.print_graphic_mode();
-        self.print_opcolor();
     }
 }
