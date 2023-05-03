@@ -13,11 +13,15 @@ use syn::{
 enum Action {
     Print,
     Rename(Ident),
+    Iter,
+    Structure,
 }
 
 impl Parse for Action {
     fn parse(input: ParseStream) -> Result<Self> {
         syn::custom_keyword!(rename);
+        syn::custom_keyword!(iter);
+        syn::custom_keyword!(st);
         if input.peek(rename) {
             let _ = input.parse::<rename>()?;
             let _ = input.parse::<syn::Token![=]>()?;
@@ -30,6 +34,12 @@ impl Parse for Action {
                     Span::call_site(),
                 )))
             }
+        } else if input.peek(iter) {
+            let _ = input.parse::<iter>()?;
+            Ok(Action::Iter)
+        } else if input.peek(st) {
+            let _ = input.parse::<st>()?;
+            Ok(Action::Structure)
         } else {
             Ok(Action::Print)
         }
@@ -40,7 +50,7 @@ fn get_action_from(attributes: &[Attribute]) -> Result<Option<Action>> {
     let mut current: Option<Action> = None;
 
     for attr in attributes {
-        if attr.path().is_ident("print_atom") {
+        if attr.path().is_ident("print_comp") {
             current = Some(attr.parse_args::<Action>()?);
         }
     }
@@ -52,6 +62,7 @@ pub struct Field {
     name: Ident,
     fn_name: Ident,
     has_iter: bool,
+    is_st: bool,
 }
 
 impl Field {
@@ -60,21 +71,31 @@ impl Field {
             .ident
             .clone()
             .ok_or(Error::new(Span::call_site(), Problem::UnnamedField))?;
-        let mut has_iter = false;
-        if let syn::Type::Path(path) = &field.ty {
-            has_iter = path.path.get_ident().is_none();
-        }
 
         match get_action_from(field.attrs.as_slice())? {
             Some(Action::Print) => Ok(Some(Field {
                 name: name.clone(),
                 fn_name: name,
-                has_iter,
+                has_iter: false,
+                is_st: false,
             })),
             Some(Action::Rename(ident)) => Ok(Some(Field {
                 name,
                 fn_name: ident,
-                has_iter,
+                has_iter: false,
+                is_st: false,
+            })),
+            Some(Action::Iter) => Ok(Some(Field {
+                name: name.clone(),
+                fn_name: name,
+                has_iter: true,
+                is_st: false,
+            })),
+            Some(Action::Structure) => Ok(Some(Field {
+                name: name.clone(),
+                fn_name: name,
+                has_iter: false,
+                is_st: true,
             })),
             None => Ok(None),
         }
@@ -111,6 +132,14 @@ impl Field {
                     });
                     self.base.print_depth();
                     println!("</{}>",stringify!(#field_name));
+                }
+            )
+        } else if self.is_st {
+            quote!(
+                #[doc=#comment]
+                pub fn #fn_print(&self) {
+                    self.base.print_depth();
+                    println!("{}: {:?}", stringify!(#field_name) , self.#field_name);
                 }
             )
         } else {

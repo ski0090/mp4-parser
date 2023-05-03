@@ -1,10 +1,12 @@
 pub mod ftyp;
+pub mod mdat;
 pub mod moov;
+pub mod undef;
 
 use crate::utils::name::BoxType;
 use std::{
     fmt::{Debug, Display},
-    io::{BufReader, Read, Seek, SeekFrom},
+    io::{BufReader, ErrorKind, Read, Seek, SeekFrom},
 };
 
 pub trait Mp4Atom: Debug {
@@ -13,7 +15,7 @@ pub trait Mp4Atom: Debug {
         R: Read + Seek,
         Self: Sized;
 
-    fn print_atom(&self);
+    fn print_comp(&self);
 }
 
 #[derive(Debug, Clone)]
@@ -53,12 +55,31 @@ impl BaseBox {
         }
     }
 
+    pub fn child<R>(&self, reader: &mut BufReader<R>) -> Self
+    where
+        R: Read + Seek,
+    {
+        let offset = reader.stream_position().unwrap();
+        let (name, size) = Self::parse_header(reader);
+        Self {
+            offset,
+            size,
+            name,
+            depth: self.depth + 1,
+        }
+    }
+
     fn parse_header<R>(reader: &mut BufReader<R>) -> (BoxType, u64)
     where
         R: Read + Seek,
     {
         let mut buf = [0u8; 8];
-        reader.read_exact(&mut buf).unwrap();
+        if let Err(ref e) = reader.read_exact(&mut buf) {
+            if e.kind() == ErrorKind::UnexpectedEof {
+                return (BoxType::UnknownBox(0), 0);
+            }
+            panic!("{e}");
+        }
 
         let s = buf[0..4].try_into().unwrap();
         let size = u32::from_be_bytes(s);
@@ -73,7 +94,7 @@ impl BaseBox {
             let size = match largesize {
                 0 => 0,
                 1..=15 => panic!("64-bit box size too small"),
-                16..=u64::MAX => largesize - 8,
+                16..=u64::MAX => largesize,
             };
 
             (name, size)
@@ -90,8 +111,11 @@ impl BaseBox {
     }
 
     pub fn print(&self) {
+        println!("----------------------------------------");
         self.print_depth();
         println!("name: {}", self.name.as_ref());
+        self.print_depth();
+        println!("offset: {}", self.offset);
         self.print_depth();
         println!("size: {}", self.size);
     }

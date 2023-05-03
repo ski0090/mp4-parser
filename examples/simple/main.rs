@@ -11,5 +11,5 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let mp4 = Mp4Header::parse(args.file);
-    mp4.print_atom();
+    mp4.print_comp();
 }
